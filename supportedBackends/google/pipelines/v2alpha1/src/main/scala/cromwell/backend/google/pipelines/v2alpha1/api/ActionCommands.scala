@@ -14,6 +14,8 @@ import scala.concurrent.duration._
   * Utility methods to build shell commands for localization / delocalization.
   */
 object ActionCommands {
+  val GcloudAuthList = "gcloud auth list"
+
   implicit val waitBetweenRetries: FiniteDuration = 5.seconds
 
   implicit class EnhancedCromwellPath(val path: Path) extends AnyVal {
@@ -34,7 +36,7 @@ object ActionCommands {
 
   def delocalizeDirectory(containerPath: Path, cloudPath: Path, contentType: Option[ContentType])(implicit localizationConfiguration: LocalizationConfiguration) = retry {
     recoverRequesterPaysError(cloudPath) { flag =>
-      s"gsutil $flag ${contentType |> makeContentTypeFlag} -m rsync -r ${containerPath.escape} ${cloudPath.escape}"
+      s"$GcloudAuthList && gsutil $flag ${contentType |> makeContentTypeFlag} -m rsync -r ${containerPath.escape} ${cloudPath.escape}"
     }
   }
 
@@ -52,7 +54,7 @@ object ActionCommands {
     */
   def delocalizeFile(containerPath: Path, cloudPath: Path, contentType: Option[ContentType])(implicit localizationConfiguration: LocalizationConfiguration) = retry {
     recoverRequesterPaysError(cloudPath) { flag =>
-      s"gsutil $flag ${contentType |> makeContentTypeFlag} cp ${containerPath.escape} ${cloudPath.parent.escape.ensureSlashed}"
+      s"$GcloudAuthList && gsutil $flag ${contentType |> makeContentTypeFlag} cp ${containerPath.escape} ${cloudPath.parent.escape.ensureSlashed}"
     }
   }
 
@@ -62,7 +64,7 @@ object ActionCommands {
     */
   def delocalizeFileTo(containerPath: Path, cloudPath: Path, contentType: Option[ContentType])(implicit localizationConfiguration: LocalizationConfiguration) = retry {
     recoverRequesterPaysError(cloudPath) { flag =>
-      s"gsutil $flag ${contentType |> makeContentTypeFlag} cp ${containerPath.escape} ${cloudPath.escape}"
+      s"$GcloudAuthList && gsutil $flag ${contentType |> makeContentTypeFlag} cp ${containerPath.escape} ${cloudPath.escape}"
     }
   }
 
@@ -80,13 +82,13 @@ object ActionCommands {
 
   def localizeDirectory(cloudPath: Path, containerPath: Path)(implicit localizationConfiguration: LocalizationConfiguration) = retry {
     recoverRequesterPaysError(cloudPath) { flag =>
-      s"${containerPath |> makeContainerDirectory} && gsutil $flag -m rsync -r ${cloudPath.escape} ${containerPath.escape}"
+      s"${containerPath |> makeContainerDirectory} && $GcloudAuthList && gsutil $flag -m rsync -r ${cloudPath.escape} ${containerPath.escape}"
     }
   }
 
   def localizeFile(cloudPath: Path, containerPath: Path)(implicit localizationConfiguration: LocalizationConfiguration) = retry {
     recoverRequesterPaysError(cloudPath) { flag =>
-      s"gsutil $flag cp ${cloudPath.escape} ${containerPath.escape}"
+      s"$GcloudAuthList && gsutil $flag cp ${cloudPath.escape} ${containerPath.escape}"
     }
   }
   

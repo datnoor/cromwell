@@ -70,7 +70,7 @@ trait Delocalization {
 
   private def delocalizeOutputJsonFilesAction(cloudCallRoot: Path, inputFile: String, workflowRoot: String, mounts: List[Mount]): Action = {
     val sedStripSlashPrefix = "s/^\\///"
-    val gsutilCommand: String => String = flag => s"""gsutil -m $flag cp -r % ${cloudCallRoot.pathAsString.ensureSlashed}$$(echo % | sed -e "$sedStripSlashPrefix")"""
+    val gsutilCommand: String => String = flag => s"""${ActionCommands.GcloudAuthList} && gsutil -m $flag cp -r % ${cloudCallRoot.pathAsString.ensureSlashed}$$(echo % | sed -e "$sedStripSlashPrefix")"""
     val command =
         // Read the file containing files to delocalize
         s"cat $inputFile 2>/dev/null" +
