@@ -33,7 +33,7 @@ object CentaurTestException {
       message,
       workflowDefinition.testName,
       Option(submittedWorkflow.id.toString),
-      Option(actualMetadata.value.toJson.compactPrint),
+      Option(actualMetadata.value.toJson.prettyPrint),
       None
     )
   }
