@@ -1,6 +1,7 @@
 package cromwell.engine.workflow.lifecycle.execution.callcaching
 
 import cats.data.NonEmptyList
+import common.util.StringUtil._
 import cromwell.backend.BackendJobDescriptorKey
 import cromwell.backend.BackendJobExecutionActor.{CallCached, JobFailedNonRetryableResponse, JobSucceededResponse}
 import cromwell.core.ExecutionIndex.{ExecutionIndex, IndexEnhancedIndex}
@@ -13,7 +14,7 @@ import cromwell.database.sql.SqlConverters._
 import cromwell.database.sql._
 import cromwell.database.sql.joins.CallCachingJoin
 import cromwell.database.sql.tables._
-import cromwell.engine.workflow.lifecycle.execution.callcaching.CallCache.CallCacheHashBundle
+import cromwell.engine.workflow.lifecycle.execution.callcaching.CallCache._
 import cromwell.engine.workflow.lifecycle.execution.callcaching.CallCacheReadActor.AggregatedCallHashes
 import cromwell.engine.workflow.lifecycle.execution.callcaching.EngineJobHashingActor.CallCacheHashes
 import wom.core._
@@ -72,8 +73,9 @@ class CallCache(database: CallCachingSqlDatabase) {
     CallCachingJoin(callCachingEntry, hashesToInsert.toSeq, aggregatedHashesToInsert, resultToInsert.toSeq, jobDetritusToInsert.toSeq)
   }
 
-  def hasBaseAggregatedHashMatch(baseAggregatedHash: String)(implicit ec: ExecutionContext): Future[Boolean] = {
-    database.hasMatchingCallCachingEntriesForBaseAggregation(baseAggregatedHash)
+  def hasBaseAggregatedHashMatch(baseAggregatedHash: String, hints: List[CacheHitHint])(implicit ec: ExecutionContext): Future[Boolean] = {
+    val executionBucketHint = hints collectFirst { case h: ExecutionBucketHint => h.bucketName.ensureSlashed }
+    database.hasMatchingCallCachingEntriesForBaseAggregation(baseAggregatedHash, executionBucketHint)
   }
 
   def hasKeyValuePairHashMatch(hashes: NonEmptyList[HashResult])(implicit ec: ExecutionContext): Future[Boolean] = {
@@ -170,4 +172,7 @@ object CallCache {
       hashResults.toSet
     }
   }
+
+  sealed trait CacheHitHint
+  case class ExecutionBucketHint(bucketName: String) extends CacheHitHint
 }

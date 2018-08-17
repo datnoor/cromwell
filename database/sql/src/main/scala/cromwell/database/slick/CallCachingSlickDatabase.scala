@@ -58,9 +58,12 @@ trait CallCachingSlickDatabase extends CallCachingSqlDatabase {
     runTransaction(action)
   }
 
-  override def hasMatchingCallCachingEntriesForBaseAggregation(baseAggregationHash: String)
+  override def hasMatchingCallCachingEntriesForBaseAggregation(baseAggregationHash: String, executionBucketHint: Option[String] = None)
                                                               (implicit ec: ExecutionContext): Future[Boolean] = {
-    val action = dataAccess.existsCallCachingEntriesForBaseAggregationHash(baseAggregationHash).result
+    val action = executionBucketHint match {
+      case None => dataAccess.existsCallCachingEntriesForBaseAggregationHash(baseAggregationHash).result
+      case Some(bucketPath) => dataAccess.existsCallCachingEntriesForBaseAggregationHashWithExecutionBucket((baseAggregationHash, bucketPath, bucketPath.length)).result
+    }
 
     runTransaction(action)
   }

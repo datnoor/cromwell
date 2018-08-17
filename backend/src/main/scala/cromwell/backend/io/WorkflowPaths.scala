@@ -19,7 +19,7 @@ trait WorkflowPaths extends PathFactory {
   /**
     * Path (as a String) of the root directory Cromwell should use for ALL workflows.
     */
-  protected lazy val executionRootString: String = config.as[Option[String]]("root").getOrElse("cromwell-executions")
+  lazy val executionRootString: String = config.as[Option[String]]("root").getOrElse("cromwell-executions")
 
   /**
     * Path of the root directory Cromwell will use for ALL workflows.

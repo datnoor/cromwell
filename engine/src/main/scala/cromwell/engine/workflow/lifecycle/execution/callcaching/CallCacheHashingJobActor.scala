@@ -5,6 +5,7 @@ import java.security.MessageDigest
 import javax.xml.bind.DatatypeConverter
 import akka.actor.{ActorRef, LoggingFSM, Props, Terminated}
 import cats.data.NonEmptyList
+import cromwell.backend.standard.StandardInitializationData
 import cromwell.backend.standard.callcaching.StandardFileHashingActor.{FileHashResponse, SingleFileHashRequest}
 import cromwell.backend.{BackendInitializationData, BackendJobDescriptor, RuntimeAttributeDefinition}
 import cromwell.core.Dispatcher.EngineDispatcher
@@ -16,6 +17,9 @@ import cromwell.engine.workflow.lifecycle.execution.callcaching.EngineJobHashing
 import wom.RuntimeAttributesKeys
 import wom.types._
 import wom.values._
+import CallCache._
+
+import scala.language.postfixOps
 
 /**
   * Actor responsible for calculating individual as well as aggregated hashes for a job.
@@ -137,7 +141,9 @@ class CallCacheHashingJobActor(jobDescriptor: BackendJobDescriptor,
     val hashingJobActorData = CallCacheHashingJobActorData(fileHashRequests.toList, callCacheReadingJobActor)
     startWith(WaitingForHashFileRequest, hashingJobActorData)
 
-    val initialHashingResult = InitialHashingResult(initialHashes, calculateHashAggregation(initialHashes, MessageDigest.getInstance("MD5")))
+    val aggregatedBaseHash = calculateHashAggregation(initialHashes, MessageDigest.getInstance("MD5"))
+    val executionBucketHint = initializationData collect { case d: StandardInitializationData => ExecutionBucketHint(d.workflowPaths.executionRootString) } toList
+    val initialHashingResult = InitialHashingResult(initialHashes, aggregatedBaseHash, executionBucketHint)
 
     sendToCallCacheReadingJobActor(initialHashingResult, hashingJobActorData)
     context.parent ! initialHashingResult
@@ -281,7 +287,7 @@ object CallCacheHashingJobActor {
   case object NextBatchOfFileHashesRequest extends CCHJARequest
 
   sealed trait CCHJAResponse
-  case class InitialHashingResult(initialHashes: Set[HashResult], aggregatedBaseHash: String) extends CCHJAResponse
+  case class InitialHashingResult(initialHashes: Set[HashResult], aggregatedBaseHash: String, cacheHitHints: List[CacheHitHint] = List.empty) extends CCHJAResponse
 
   // File Hashing responses
   sealed trait CCHJAFileHashResponse extends CCHJAResponse

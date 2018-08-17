@@ -5,7 +5,7 @@ import cromwell.database.sql.tables.CallCachingAggregationEntry
 
 trait CallCachingAggregationEntryComponent {
 
-  this: DriverComponent with CallCachingEntryComponent =>
+  this: DriverComponent with CallCachingEntryComponent with CallCachingDetritusEntryComponent =>
 
   import driver.api._
 
@@ -47,6 +47,20 @@ trait CallCachingAggregationEntryComponent {
       callCachingAggregationEntry <- callCachingAggregationEntries
       if callCachingEntry.callCachingEntryId === callCachingAggregationEntry.callCachingEntryId
       if callCachingAggregationEntry.baseAggregation === baseAggregation
+    } yield ()).exists
+  )
+
+  val existsCallCachingEntriesForBaseAggregationHashWithExecutionBucket = Compiled(
+    (baseAggregation: Rep[String], executionBucket: Rep[String], executionBucketLength: Rep[Int]) => (for {
+      callCachingEntry <- callCachingEntries
+      if callCachingEntry.allowResultReuse
+      callCachingAggregationEntry <- callCachingAggregationEntries
+      if callCachingEntry.callCachingEntryId === callCachingAggregationEntry.callCachingEntryId
+      if callCachingAggregationEntry.baseAggregation === baseAggregation
+      detritus <- callCachingDetritusEntries
+      if detritus.callCachingEntryId === callCachingEntry.callCachingEntryId
+      detritusPath = detritus.detritusValue.map { x => x.asColumnOf[String] }
+      if detritusPath.substring(0, executionBucketLength) === executionBucket
     } yield ()).exists
   )
 
